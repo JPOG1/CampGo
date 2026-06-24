@@ -1,26 +1,7 @@
 import axios from 'axios';
 
-function getApiUrl(): string {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) return envUrl;
-
-  const globalUrl = (window as any).__APPWRITE_FUNCTION_URL;
-  if (globalUrl) return globalUrl;
-
-  const hostname = window.location.hostname;
-  if (hostname.endsWith('.appwrite.app')) {
-    const projectId = hostname.split('.')[0];
-    const functionId = (window as any).__APPWRITE_FUNCTION_ID || 'campgo-api';
-    return `https://functions.appwrite.org/v1/custom/${projectId}/${functionId}`;
-  }
-
-  return '/api/v1';
-}
-
-const API_URL = getApiUrl();
-
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: 30000,
 });
 
@@ -47,7 +28,7 @@ api.interceptors.response.use(
       if (refreshToken && error.config && !error.config._retry) {
         error.config._retry = true;
         try {
-          const res = await axios.post(`${API_URL}/auth/refresh`, { refresh_token: refreshToken });
+          const res = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken });
           const { access_token } = res.data;
           localStorage.setItem('accessToken', access_token);
           error.config.headers.Authorization = `Bearer ${access_token}`;
