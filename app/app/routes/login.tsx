@@ -14,12 +14,19 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showVerifyBanner, setShowVerifyBanner] = useState(false);
 
+  const roleRedirect: Record<string, string> = {
+    CUSTOMER: '/dashboard',
+    RIDER: '/rider/dashboard',
+    VENDOR: '/vendor/dashboard',
+    ADMIN: '/admin/dashboard',
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       if (user && !user.is_verified) {
         setShowVerifyBanner(true);
-      } else {
-        navigate({ to: '/dashboard' });
+      } else if (user) {
+        navigate({ to: roleRedirect[user.role] || '/dashboard' });
       }
     }
   }, [isAuthenticated, user, navigate]);

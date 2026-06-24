@@ -999,3 +999,96 @@ export const transportRoutes = pgTable('transport_routes', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const shops = pgTable('shops', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  vendorId: uuid('vendor_id').notNull().references(() => vendors.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  category: varchar('category', { length: 100 }).notNull(),
+  coverImage: varchar('cover_image', { length: 500 }),
+  logoUrl: varchar('logo_url', { length: 500 }),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_shops_vendor_id').on(table.vendorId),
+  index('idx_shops_category').on(table.category),
+  index('idx_shops_is_active').on(table.isActive),
+]);
+
+export const products = pgTable('products', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shopId: uuid('shop_id').notNull().references(() => shops.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('NGN'),
+  image: varchar('image', { length: 500 }),
+  category: varchar('category', { length: 100 }),
+  stockQuantity: integer('stock_quantity').notNull().default(0),
+  isAvailable: boolean('is_available').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_products_shop_id').on(table.shopId),
+  index('idx_products_category').on(table.category),
+  index('idx_products_is_available').on(table.isAvailable),
+]);
+
+export const shopCartItems = pgTable('shop_cart_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  shopId: uuid('shop_id').notNull().references(() => shops.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  quantity: integer('quantity').notNull().default(1),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_shop_cart_items_user_id').on(table.userId),
+  index('idx_shop_cart_items_shop_id').on(table.shopId),
+]);
+
+export const shopOrders = pgTable('shop_orders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  shopId: uuid('shop_id').notNull().references(() => shops.id, { onDelete: 'restrict' }),
+  status: varchar('status', { length: 30 }).notNull().default('PENDING'),
+  subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
+  deliveryFee: numeric('delivery_fee', { precision: 10, scale: 2 }).notNull().default('0'),
+  totalAmount: numeric('total_amount', { precision: 15, scale: 2 }).notNull(),
+  deliveryAddress: varchar('delivery_address', { length: 500 }).notNull(),
+  paymentMethod: varchar('payment_method', { length: 50 }).notNull().default('CARD'),
+  paymentStatus: varchar('payment_status', { length: 20 }).notNull().default('PENDING'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_shop_orders_user_id').on(table.userId),
+  index('idx_shop_orders_shop_id').on(table.shopId),
+  index('idx_shop_orders_status').on(table.status),
+]);
+
+export const shopOrderItems = pgTable('shop_order_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shopOrderId: uuid('shop_order_id').notNull().references(() => shopOrders.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'restrict' }),
+  productName: varchar('product_name', { length: 200 }).notNull(),
+  quantity: integer('quantity').notNull().default(1),
+  unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
+  subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_shop_order_items_order_id').on(table.shopOrderId),
+]);
+
+export const shopOrderStatusHistory = pgTable('shop_order_status_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shopOrderId: uuid('shop_order_id').notNull().references(() => shopOrders.id, { onDelete: 'cascade' }),
+  status: varchar('status', { length: 30 }).notNull(),
+  notes: text('notes'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_shop_order_status_history_order_id').on(table.shopOrderId),
+]);

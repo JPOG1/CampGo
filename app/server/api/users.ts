@@ -52,12 +52,13 @@ usersRouter.post('/', async (req, res) => {
 usersRouter.patch('/profile', authenticate, async (req, res) => {
   try {
     const userId = req.user!.sub;
-    const { first_name, last_name, email } = req.body;
+    const { first_name, last_name, email, profile_image_url } = req.body;
     const updates: string[] = [];
     const values: any[] = [];
     if (first_name !== undefined) { updates.push('first_name'); values.push(first_name); }
     if (last_name !== undefined) { updates.push('last_name'); values.push(last_name); }
     if (email !== undefined) { updates.push('email'); values.push(email); }
+    if (profile_image_url !== undefined) { updates.push('profile_image_url'); values.push(profile_image_url); }
     if (updates.length === 0) {
       return res.status(400).json({ detail: 'No fields to update' });
     }

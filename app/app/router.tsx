@@ -17,6 +17,9 @@ const RestaurantDetailPage = lazy(() => import('./routes/_customer/restaurants.$
 const CartPage = lazy(() => import('./routes/_customer/cart').then(m => ({ default: m.CartPage })));
 const OrdersPage = lazy(() => import('./routes/_customer/orders').then(m => ({ default: m.OrdersPage })));
 const OrderDetailPage = lazy(() => import('./routes/_customer/orders.$id').then(m => ({ default: m.OrderDetailPage })));
+const MarketplacePage = lazy(() => import('./routes/_customer/marketplace').then(m => ({ default: m.MarketplacePage })));
+const ShopDetailPage = lazy(() => import('./routes/_customer/marketplace.$id').then(m => ({ default: m.ShopDetailPage })));
+const ShopCartPage = lazy(() => import('./routes/_customer/shop-cart').then(m => ({ default: m.ShopCartPage })));
 
 const RiderDashboard = lazy(() => import('./routes/_rider/dashboard').then(m => ({ default: m.RiderDashboard })));
 const RiderEarnings = lazy(() => import('./routes/_rider/earnings').then(m => ({ default: m.RiderEarnings })));
@@ -36,6 +39,9 @@ const VendorDashboard = lazy(() => import('./routes/_vendor/dashboard').then(m =
 const VendorMenu = lazy(() => import('./routes/_vendor/menu').then(m => ({ default: m.VendorMenu })));
 const VendorOrders = lazy(() => import('./routes/_vendor/orders').then(m => ({ default: m.VendorOrders })));
 const VendorRestaurant = lazy(() => import('./routes/_vendor/restaurant').then(m => ({ default: m.VendorRestaurant })));
+const MyShopPage = lazy(() => import('./routes/_vendor/my-shop').then(m => ({ default: m.MyShopPage })));
+const ManageProductsPage = lazy(() => import('./routes/_vendor/manage-products').then(m => ({ default: m.ManageProductsPage })));
+const ShopOrdersPage = lazy(() => import('./routes/_vendor/shop-orders').then(m => ({ default: m.ShopOrdersPage })));
 
 import { RootLayout } from './components/layout/RootLayout';
 import { CustomerLayout } from './components/layout/CustomerLayout';
@@ -151,6 +157,24 @@ const orderDetailRoute = createRoute({
   component: OrderDetailPage,
 });
 
+const marketplaceRoute = createRoute({
+  getParentRoute: () => customerLayoutRoute,
+  path: '/marketplace',
+  component: MarketplacePage,
+});
+
+const marketplaceDetailRoute = createRoute({
+  getParentRoute: () => customerLayoutRoute,
+  path: '/marketplace/$id',
+  component: ShopDetailPage,
+});
+
+const shopCartRoute = createRoute({
+  getParentRoute: () => customerLayoutRoute,
+  path: '/shop-cart',
+  component: ShopCartPage,
+});
+
 const riderLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'rider',
@@ -203,6 +227,24 @@ const vendorRestaurantRoute = createRoute({
   getParentRoute: () => vendorLayoutRoute,
   path: '/vendor/restaurant',
   component: VendorRestaurant,
+});
+
+const vendorShopRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/my-shop',
+  component: MyShopPage,
+});
+
+const vendorProductsRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/manage-products',
+  component: ManageProductsPage,
+});
+
+const vendorShopOrdersRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/shop-orders',
+  component: ShopOrdersPage,
 });
 
 const adminLayoutRoute = createRoute({
@@ -279,6 +321,9 @@ const routeTree = rootRoute.addChildren([
     supportRoute,
     restaurantsRoute,
     restaurantDetailRoute,
+    marketplaceRoute,
+    marketplaceDetailRoute,
+    shopCartRoute,
     cartRoute,
     ordersRoute,
     orderDetailRoute,
@@ -293,6 +338,9 @@ const routeTree = rootRoute.addChildren([
     vendorMenuRoute,
     vendorOrdersRoute,
     vendorRestaurantRoute,
+    vendorShopRoute,
+    vendorProductsRoute,
+    vendorShopOrdersRoute,
   ]),
   adminLayoutRoute.addChildren([
     adminDashboardRoute,

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../../../store/auth';
 import api from '../../../shared/lib/api';
 import { toast } from 'sonner';
+import { ImageUpload } from '../../components/ui/ImageUpload';
 
 export function ProfilePage() {
   const { user, setUser, logout } = useAuthStore();
@@ -9,10 +10,16 @@ export function ProfilePage() {
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [profileImageUrl, setProfileImageUrl] = useState(user?.profile_image_url || '');
 
   const handleSave = async () => {
     try {
-      const res = await api.patch('/users/profile', { first_name: firstName, last_name: lastName, email });
+      const res = await api.patch('/users/profile', {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        profile_image_url: profileImageUrl,
+      });
       setUser(res.data);
       setEditing(false);
       toast.success('Profile updated');
@@ -27,9 +34,13 @@ export function ProfilePage() {
 
       <div className="card">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
-            {user?.first_name?.[0]?.toUpperCase() || 'U'}
-          </div>
+          {user?.profile_image_url ? (
+            <img src={user.profile_image_url} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
+          ) : (
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+              {user?.first_name?.[0]?.toUpperCase() || 'U'}
+            </div>
+          )}
           <div>
             <h3 className="text-lg font-semibold">{user?.first_name} {user?.last_name}</h3>
             <span className="badge badge-success">{user?.role}</span>
@@ -38,6 +49,12 @@ export function ProfilePage() {
 
         {editing ? (
           <div className="space-y-4">
+            <ImageUpload
+              label="Profile Photo"
+              currentUrl={profileImageUrl}
+              onUpload={(url) => setProfileImageUrl(url)}
+              type="avatar"
+            />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
               <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />

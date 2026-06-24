@@ -26,6 +26,8 @@ import { foodExtraRouter } from './api/foodExtra.js';
 import { navigationRouter } from './api/navigation.js';
 import { gatewayRouter } from './api/gateway.js';
 import { transportRouter } from './api/transport.js';
+import { uploadRouter } from './api/upload.js';
+import { shopRouter } from './api/shop.js';
 import { setupWebSocket } from './ws/index.js';
 import { csrfProtection } from './middleware/csrf.js';
 import logger from './services/logger.js';
@@ -96,6 +98,8 @@ app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/navigation', navigationRouter);
 app.use('/api/v1/gateway', gatewayRouter);
 app.use('/api/v1/transport', transportRouter);
+app.use('/api/v1', uploadRouter);
+app.use('/api/v1', shopRouter);
 
 app.get('/healthz', (_req, res) => {
   res.json({ status: 'ok' });
@@ -111,6 +115,9 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 const distPath = path.resolve(__dirname, '../dist');
 app.use(express.static(distPath));
+
+const uploadsPath = path.resolve(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
 app.get('/{*p}', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
