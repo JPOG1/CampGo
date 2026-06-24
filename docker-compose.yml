@@ -1,0 +1,87 @@
+version: '3.8'
+
+x-common: &common
+  restart: unless-stopped
+  networks: [campgo]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: campgo-db
+    <<: *common
+    environment:
+      POSTGRES_USER: ${DB_USER:-campgo}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-campgo_secret}
+      POSTGRES_DB: ${DB_NAME:-campgo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./app/server/db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-campgo} -d ${DB_NAME:-campgo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: campgo-redis
+    <<: *common
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: campgo-api
+    <<: *common
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: postgres://${DB_USER:-campgo}:${DB_PASSWORD:-campgo_secret}@db:5432/${DB_NAME:-campgo}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      FLUTTERWAVE_SECRET_KEY: ${FLUTTERWAVE_SECRET_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    ports:
+      - "8000:8000"
+
+  admin:
+    image: nginx:alpine
+    container_name: campgo-admin
+    <<: *common
+    depends_on: [api]
+    ports:
+      - "3000:80"
+    volumes:
+      - ./admin/dist:/usr/share/nginx/html:ro
+      - ./admin/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+networks:
+  campgo:
+    driver: bridge
+
+volumes:
+  pgdata:
