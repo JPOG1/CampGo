@@ -134,3 +134,168 @@ foodExtraRouter.get('/deals', async (_req, res) => {
     return res.status(500).json({ detail: 'Internal server error' });
   }
 });
+
+// Vendor dashboard stats
+foodExtraRouter.get('/vendor/dashboard', authenticate, async (req, res) => {
+  try {
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [restaurant] = await sql`SELECT id FROM restaurants WHERE vendor_id = ${vendor.id} LIMIT 1`;
+    if (!restaurant) return res.json({ total_orders: 0, active_orders: 0, revenue: 0, rating: 0 });
+    const [stats] = await sql`
+      SELECT
+        COUNT(*)::int as total_orders,
+        COUNT(*) FILTER (WHERE status IN ('PENDING','CONFIRMED','PREPARING','READY_FOR_PICKUP'))::int as active_orders,
+        COALESCE(SUM(total_amount), 0) as revenue,
+        COALESCE(AVG(r.rating::numeric), 0) as rating
+      FROM orders o LEFT JOIN reviews r ON r.restaurant_id = o.restaurant_id
+      WHERE o.restaurant_id = ${restaurant.id}
+    `;
+    return res.json(stats);
+  } catch (err) {
+    console.error('vendor dashboard error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// Vendor get their restaurant
+foodExtraRouter.get('/vendor/restaurant', authenticate, async (req, res) => {
+  try {
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [restaurant] = await sql`SELECT * FROM restaurants WHERE vendor_id = ${vendor.id} LIMIT 1`;
+    return res.json(restaurant || null);
+  } catch (err) {
+    console.error('vendor restaurant error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// Vendor list menu items
+foodExtraRouter.get('/vendor/menu', authenticate, async (req, res) => {
+  try {
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [restaurant] = await sql`SELECT id FROM restaurants WHERE vendor_id = ${vendor.id} LIMIT 1`;
+    if (!restaurant) return res.json([]);
+    const items = await sql`SELECT * FROM menu_items WHERE restaurant_id = ${restaurant.id} ORDER BY sort_order ASC, category ASC, name ASC`;
+    return res.json(items);
+  } catch (err) {
+    console.error('vendor menu error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// Vendor create menu item
+foodExtraRouter.post('/vendor/menu', authenticate, async (req, res) => {
+  try {
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [restaurant] = await sql`SELECT id FROM restaurants WHERE vendor_id = ${vendor.id} LIMIT 1`;
+    if (!restaurant) return res.status(400).json({ detail: 'Create your restaurant first' });
+    const id = uuid();
+    const { name, description, price, category, image, is_available } = req.body;
+    await sql`
+      INSERT INTO menu_items (id, restaurant_id, name, description, price, category, image, is_available, created_at)
+      VALUES (${id}, ${restaurant.id}, ${name}, ${description}, ${price}, ${category || 'Main'}, ${image}, ${is_available ?? true}, NOW())
+    `;
+    const [row] = await sql`SELECT * FROM menu_items WHERE id = ${id} LIMIT 1`;
+    return res.status(201).json(row);
+  } catch (err) {
+    console.error('vendor create menu error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// Vendor update menu item
+foodExtraRouter.patch('/vendor/menu/:id', authenticate, async (req, res) => {
+  try {
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [item] = await sql`
+      SELECT mi.* FROM menu_items mi JOIN restaurants r ON r.id = mi.restaurant_id
+      WHERE mi.id = ${req.params.id} AND r.vendor_id = ${vendor.id} LIMIT 1
+    `;
+    if (!item) return res.status(404).json({ detail: 'Menu item not found' });
+    const { name, description, price, category, image, is_available } = req.body;
+    const updates: string[] = [];
+    const values: any[] = [];
+    if (name !== undefined) { updates.push('name'); values.push(name); }
+    if (description !== undefined) { updates.push('description'); values.push(description); }
+    if (price !== undefined) { updates.push('price'); values.push(price); }
+    if (category !== undefined) { updates.push('category'); values.push(category); }
+    if (image !== undefined) { updates.push('image'); values.push(image); }
+    if (is_available !== undefined) { updates.push('is_available'); values.push(is_available); }
+    if (updates.length === 0) return res.json(item);
+    updates.push('updated_at'); values.push(new Date());
+    const setClause = updates.map((c, i) => `${c} = $${i + 1}`).join(', ');
+    await sql.unsafe(`UPDATE menu_items SET ${setClause} WHERE id = $${updates.length + 1}`, [...values, req.params.id]);
+    const [row] = await sql`SELECT * FROM menu_items WHERE id = ${req.params.id} LIMIT 1`;
+    return res.json(row);
+  } catch (err) {
+    console.error('vendor update menu error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// Vendor list orders
+foodExtraRouter.get('/vendor/orders', authenticate, async (req, res) => {
+  try {
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [restaurant] = await sql`SELECT id FROM restaurants WHERE vendor_id = ${vendor.id} LIMIT 1`;
+    if (!restaurant) return res.json([]);
+    const orders = await sql`
+      SELECT o.*, u.first_name || ' ' || u.last_name as customer_name
+      FROM orders o JOIN users u ON u.id = o.user_id
+      WHERE o.restaurant_id = ${restaurant.id}
+      ORDER BY o.created_at DESC LIMIT 50
+    `;
+    const orderIds = orders.map((o: any) => o.id);
+    const allItems = orderIds.length > 0
+      ? await sql`SELECT * FROM order_items WHERE order_id = ANY(${orderIds}) ORDER BY created_at ASC`
+      : [];
+    const itemsByOrder = new Map();
+    for (const item of allItems) {
+      const list = itemsByOrder.get(item.order_id) || [];
+      list.push(item);
+      itemsByOrder.set(item.order_id, list);
+    }
+    const result = orders.map((o: any) => ({ ...o, items: itemsByOrder.get(o.id) || [] }));
+    return res.json(result);
+  } catch (err) {
+    console.error('vendor orders error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// Vendor update order status
+foodExtraRouter.patch('/vendor/orders/:id', authenticate, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ detail: 'Status is required' });
+    const [vendor] = await sql`SELECT id FROM vendors WHERE user_id = ${req.user!.sub} LIMIT 1`;
+    if (!vendor) return res.status(404).json({ detail: 'Vendor profile not found' });
+    const [order] = await sql`
+      SELECT o.* FROM orders o JOIN restaurants r ON r.id = o.restaurant_id
+      WHERE o.id = ${req.params.id} AND r.vendor_id = ${vendor.id} LIMIT 1
+    `;
+    if (!order) return res.status(404).json({ detail: 'Order not found' });
+    const timestampFields: Record<string, string> = {
+      CONFIRMED: 'accepted_at',
+      PREPARING: 'prepared_at',
+      READY_FOR_PICKUP: 'prepared_at',
+      CANCELLED: 'cancelled_at',
+    };
+    const tsField = timestampFields[status];
+    const tsClause = tsField ? `, ${tsField} = NOW()` : '';
+    await sql.unsafe(`UPDATE orders SET status = $1, updated_at = NOW()${tsClause} WHERE id = $2`, [status, req.params.id]);
+    await sql`INSERT INTO order_status_history (id, order_id, status, notes, created_by, created_at) VALUES (${uuid()}, ${req.params.id}, ${status}, ${'Updated by vendor'}, ${req.user!.sub}, NOW())`;
+    const [updated] = await sql`SELECT * FROM orders WHERE id = ${req.params.id} LIMIT 1`;
+    const [customer] = await sql`SELECT first_name, last_name FROM users WHERE id = ${updated.user_id} LIMIT 1`;
+    return res.json({ ...updated, customer_name: customer ? customer.first_name + ' ' + customer.last_name : 'Unknown' });
+  } catch (err) {
+    console.error('vendor update order error:', err);
+    return res.status(500).json({ detail: 'Internal server error' });
+  }
+});

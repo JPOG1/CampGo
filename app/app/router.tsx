@@ -1,5 +1,5 @@
-import { createRouter, createRootRoute, createRoute, Outlet, redirect } from '@tanstack/react-router';
-import { lazy, Suspense } from 'react';
+import { createRouter, createRootRoute, createRoute, redirect } from '@tanstack/react-router';
+import { lazy } from 'react';
 import { useAuthStore } from '../store/auth';
 
 const LoginPage = lazy(() => import('./routes/login').then(m => ({ default: m.LoginPage })));
@@ -32,9 +32,15 @@ const AdminFraud = lazy(() => import('./routes/_admin/fraud').then(m => ({ defau
 const AdminSettings = lazy(() => import('./routes/_admin/settings').then(m => ({ default: m.AdminSettings })));
 const AdminFoodOrders = lazy(() => import('./routes/_admin/food-orders').then(m => ({ default: m.AdminFoodOrders })));
 
+const VendorDashboard = lazy(() => import('./routes/_vendor/dashboard').then(m => ({ default: m.VendorDashboard })));
+const VendorMenu = lazy(() => import('./routes/_vendor/menu').then(m => ({ default: m.VendorMenu })));
+const VendorOrders = lazy(() => import('./routes/_vendor/orders').then(m => ({ default: m.VendorOrders })));
+const VendorRestaurant = lazy(() => import('./routes/_vendor/restaurant').then(m => ({ default: m.VendorRestaurant })));
+
 import { RootLayout } from './components/layout/RootLayout';
 import { CustomerLayout } from './components/layout/CustomerLayout';
 import { RiderLayout } from './components/layout/RiderLayout';
+import { VendorLayout } from './components/layout/VendorLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 
 const rootRoute = createRootRoute({
@@ -49,6 +55,7 @@ const indexRoute = createRoute({
     if (!isAuthenticated) throw redirect({ to: '/login' });
     if (user?.role === 'ADMIN') throw redirect({ to: '/admin/dashboard' });
     if (user?.role === 'RIDER') throw redirect({ to: '/rider/dashboard' });
+    if (user?.role === 'VENDOR') throw redirect({ to: '/vendor/dashboard' });
     throw redirect({ to: '/dashboard' });
   },
   component: () => null,
@@ -168,6 +175,36 @@ const riderBankRoute = createRoute({
   component: RiderBank,
 });
 
+const vendorLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'vendor',
+  component: VendorLayout,
+});
+
+const vendorDashboardRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/dashboard',
+  component: VendorDashboard,
+});
+
+const vendorMenuRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/menu',
+  component: VendorMenu,
+});
+
+const vendorOrdersRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/orders',
+  component: VendorOrders,
+});
+
+const vendorRestaurantRoute = createRoute({
+  getParentRoute: () => vendorLayoutRoute,
+  path: '/vendor/restaurant',
+  component: VendorRestaurant,
+});
+
 const adminLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'admin',
@@ -250,6 +287,12 @@ const routeTree = rootRoute.addChildren([
     riderDashboardRoute,
     riderEarningsRoute,
     riderBankRoute,
+  ]),
+  vendorLayoutRoute.addChildren([
+    vendorDashboardRoute,
+    vendorMenuRoute,
+    vendorOrdersRoute,
+    vendorRestaurantRoute,
   ]),
   adminLayoutRoute.addChildren([
     adminDashboardRoute,

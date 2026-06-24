@@ -11,7 +11,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   login: (phone: string, password: string) => Promise<void>;
-  register: (data: { first_name: string; last_name: string; email: string; phone: string; password: string }) => Promise<void>;
+  register: (data: { first_name: string; last_name: string; email: string; phone: string; password: string; role?: string }) => Promise<void>;
   logout: () => void;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: { first_name?: string; last_name?: string; email?: string; profile_image_url?: string }) => Promise<void>;

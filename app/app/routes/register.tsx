@@ -3,6 +3,12 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '../../store/auth';
 import { toast } from 'sonner';
 
+const roles = [
+  { value: 'CUSTOMER', label: 'Customer', desc: 'Order rides and food' },
+  { value: 'RIDER', label: 'Rider', desc: 'Drive and earn money' },
+  { value: 'VENDOR', label: 'Restaurant Owner', desc: 'List and sell food' },
+];
+
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register, isLoading, isAuthenticated } = useAuthStore();
@@ -12,6 +18,7 @@ export function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('CUSTOMER');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -40,6 +47,7 @@ export function RegisterPage() {
         email,
         phone,
         password,
+        role,
       });
       toast.success('Account created successfully');
     } catch (err: any) {
@@ -56,6 +64,27 @@ export function RegisterPage() {
         </div>
 
         <div className="card">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">I want to join as</label>
+            <div className="grid grid-cols-3 gap-2">
+              {roles.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setRole(r.value)}
+                  className={`p-3 rounded-lg border text-center transition-colors ${
+                    role === r.value
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-xs font-semibold">{r.label}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{r.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>

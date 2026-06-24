@@ -99,10 +99,12 @@ authRouter.post('/register-with-otp', async (req, res) => {
 
 authRouter.post('/register', async (req, res) => {
   try {
-    const { first_name, last_name, email, phone, password } = req.body;
+    const { first_name, last_name, email, phone, password, role } = req.body;
     if (!first_name || !last_name || !phone || !password) {
       return res.status(400).json({ detail: 'First name, last name, phone, and password are required' });
     }
+    const allowedRoles = ['CUSTOMER', 'RIDER', 'VENDOR'];
+    const userRole = allowedRoles.includes(role) ? role : 'CUSTOMER';
     const existing = await sql`SELECT id FROM users WHERE phone = ${phone} LIMIT 1`;
     if (existing.length > 0) {
       return res.status(409).json({ detail: 'User already exists' });
@@ -117,10 +119,17 @@ authRouter.post('/register', async (req, res) => {
     const id = uuid();
     await sql`
       INSERT INTO users (id, phone, email, first_name, last_name, password_hash, role, is_active, is_verified, created_at, updated_at)
-      VALUES (${id}, ${phone}, ${email || null}, ${first_name}, ${last_name}, ${hashedPassword}, 'CUSTOMER', true, true, NOW(), NOW())
+      VALUES (${id}, ${phone}, ${email || null}, ${first_name}, ${last_name}, ${hashedPassword}, ${userRole}, true, true, NOW(), NOW())
     `;
-    const accessToken = generateAccessToken(id, 'CUSTOMER');
-    const refreshToken = generateRefreshToken(id, 'CUSTOMER');
+    if (userRole === 'VENDOR') {
+      const vendorId = uuid();
+      await sql`
+        INSERT INTO vendors (id, user_id, business_name, business_category, created_at)
+        VALUES (${vendorId}, ${id}, ${first_name + ' ' + last_name}, 'General', NOW())
+      `;
+    }
+    const accessToken = generateAccessToken(id, userRole);
+    const refreshToken = generateRefreshToken(id, userRole);
     const rows = await sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`;
     return res.json({
       access_token: accessToken,
