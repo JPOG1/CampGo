@@ -32,12 +32,15 @@ import { setupWebSocket } from './ws/index.js';
 import { csrfProtection } from './middleware/csrf.js';
 import logger from './services/logger.js';
 import { initSentry } from './services/sentry.js';
+import { testConnection } from './db/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createApp() {
   const app = express();
   initSentry();
+
+  app.set('trust proxy', 1);
 
   const limiter = rateLimit({
     windowMs: 60 * 1000,
@@ -53,7 +56,9 @@ export function createApp() {
     ? process.env.CORS_ORIGIN.split(',')
     : process.env.APPWRITE_FUNCTION === 'true'
       ? true
-      : ['http://localhost:5173', 'http://localhost:8000'];
+      : process.env.NODE_ENV === 'production'
+        ? true
+        : ['http://localhost:5173', 'http://localhost:8000'];
   app.use(cors({
     origin: corsOrigin,
     credentials: true,
@@ -102,8 +107,14 @@ export function createApp() {
   app.use('/api/v1', uploadRouter);
   app.use('/api/v1', shopRouter);
 
-  app.get('/healthz', (_req, res) => {
-    res.json({ status: 'ok' });
+  app.get('/healthz', async (_req, res) => {
+    const dbOk = await testConnection();
+    const status = dbOk ? 'ok' : 'degraded';
+    res.status(dbOk ? 200 : 503).json({
+      status,
+      database: dbOk ? 'connected' : 'disconnected',
+      uptime: process.uptime(),
+    });
   });
 
   // Global error handler
@@ -128,6 +139,20 @@ export function createApp() {
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain) {
+  const hasDbUrl = !!process.env.DATABASE_URL;
+  const dbPrefix = hasDbUrl
+    ? process.env.DATABASE_URL!.substring(0, process.env.DATABASE_URL!.indexOf('://') + 3) + '***'
+    : 'NOT SET';
+  console.log(`Starting CampGo server...`);
+  console.log(`  DATABASE_URL: ${dbPrefix}`);
+  console.log(`  NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`  PORT: ${process.env.PORT || '8000 (default)'}`);
+
+  if (!hasDbUrl) {
+    console.error('FATAL: DATABASE_URL environment variable is required but not set. Exiting.');
+    process.exit(1);
+  }
+
   const app = createApp();
   const httpServer = createServer(app);
   const io = new SocketIOServer(httpServer, {
