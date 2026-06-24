@@ -33,6 +33,7 @@ import { csrfProtection } from './middleware/csrf.js';
 import logger from './services/logger.js';
 import { initSentry } from './services/sentry.js';
 import { testConnection } from './db/index.js';
+import { runMigrations } from './db/runMigrations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -137,6 +138,29 @@ export function createApp() {
   return app;
 }
 
+async function checkRequiredTables() {
+  try {
+    const { sql } = await import('./db/index.js');
+    const result = await sql`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `;
+    const tableNames = result.map((r: any) => r.table_name);
+    const required = ['users', 'riders', 'wallets'];
+    const missing = required.filter((t) => !tableNames.includes(t));
+    if (missing.length > 0) {
+      console.warn(`WARNING: Required tables are missing: ${missing.join(', ')}`);
+      return false;
+    }
+    console.log(`Table check passed (${tableNames.length} tables found)`);
+    return true;
+  } catch (err) {
+    console.error('Table check failed:', err);
+    return false;
+  }
+}
+
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain) {
   const hasDbUrl = !!process.env.DATABASE_URL;
@@ -150,6 +174,16 @@ if (isMain) {
 
   if (!hasDbUrl) {
     console.error('FATAL: DATABASE_URL environment variable is required but not set. Exiting.');
+    process.exit(1);
+  }
+
+  try {
+    if (process.env.NODE_ENV !== 'production') {
+      await runMigrations();
+    }
+    await checkRequiredTables();
+  } catch (err) {
+    console.error('FATAL: Database initialization failed:', err);
     process.exit(1);
   }
 
