@@ -10,6 +10,8 @@ WORKDIR /app
 RUN apk add --no-cache curl
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server
+COPY --from=builder /app/appwrite/dist ./appwrite/dist
+COPY --from=builder /app/appwrite/package.json ./appwrite/
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 EXPOSE 8000
