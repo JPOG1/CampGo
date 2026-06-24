@@ -1,0 +1,12 @@
+{
+  "name": "campgo-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd app && npm install",
+    "build:all": "cd app && npm run build:all",
+    "dev": "cd app && npm run dev:all",
+    "dev:frontend": "cd app && npm run dev",
+    "dev:server": "cd app && npm run dev:server"
+  }
+}
