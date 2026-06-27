@@ -10,9 +10,9 @@ export function RiderLayout() {
   return (
     <div className="flex h-screen bg-gray-50">
       <RiderSidebar />
-      <div className="ml-64 flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col ml-0 lg:ml-64">
         <Header />
-        <main className="mt-16 flex-1 overflow-auto p-6">
+        <main className="mt-16 flex-1 overflow-auto p-4 lg:p-6">
           <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>}>
             <Outlet />
           </Suspense>

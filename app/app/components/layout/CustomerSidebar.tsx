@@ -1,5 +1,6 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { useAuthStore } from '../../../store/auth';
+import { useSidebar } from './SidebarContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -16,9 +17,14 @@ const navItems = [
 export function CustomerSidebar() {
   const location = useLocation();
   const { logout } = useAuthStore();
+  const { isOpen, close } = useSidebar();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-20">
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={close} />
+      )}
+      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-40 transition-transform duration-200 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="p-6 border-b border-gray-200">
         <h1 className="text-2xl font-bold text-primary">CampGo</h1>
       </div>
@@ -27,6 +33,7 @@ export function CustomerSidebar() {
           <Link
             key={item.path}
             to={item.path}
+            onClick={close}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
               location.pathname === item.path
                 ? 'bg-primary/10 text-primary'
@@ -52,5 +59,6 @@ export function CustomerSidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

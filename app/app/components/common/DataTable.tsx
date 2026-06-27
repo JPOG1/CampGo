@@ -20,8 +20,8 @@ export function DataTable({ columns, data, onRowClick }: DataTableProps) {
 
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto -mx-4 lg:mx-0">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr className="border-b border-gray-200">
               {columns.map((col) => (

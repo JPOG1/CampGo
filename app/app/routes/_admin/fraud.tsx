@@ -70,7 +70,7 @@ export function AdminFraud() {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {['ALL', 'OPEN', 'INVESTIGATING', 'RESOLVED'].map((f) => (
           <button
             key={f}

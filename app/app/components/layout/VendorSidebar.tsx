@@ -1,5 +1,6 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { useAuthStore } from '../../../store/auth';
+import { useSidebar } from './SidebarContext';
 
 interface NavSection {
   label: string;
@@ -34,9 +35,14 @@ const navSections: NavSection[] = [
 export function VendorSidebar() {
   const location = useLocation();
   const { logout } = useAuthStore();
+  const { isOpen, close } = useSidebar();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-20">
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={close} />
+      )}
+      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-40 transition-transform duration-200 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="p-6 border-b border-gray-200">
         <h1 className="text-2xl font-bold text-primary">CampGo Vendor</h1>
       </div>
@@ -48,15 +54,16 @@ export function VendorSidebar() {
             )}
             <div className="space-y-0.5">
               {section.items.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    location.pathname === item.path
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={close}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      location.pathname === item.path
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
                   </svg>
@@ -79,5 +86,6 @@ export function VendorSidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }
